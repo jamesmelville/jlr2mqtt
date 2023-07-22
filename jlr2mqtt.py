@@ -2,9 +2,9 @@
 A simple mqtt wrapper around @ardevd's 'jlrpy' python library (https://github.com/ardevd/jlrpy), for accessing Jaguar Land Rover's 
 Remote Car API (https://documenter.getpostman.com/view/6250319/RznBMzqo?version=latest#intro).
 
-Requires paho-mqtt and python 3.
+Requires jlrpy, paho-mqtt and python 3.
 
-Commands sent to the wrapper need to be jason formatted, and have item `command` with a value set to the name of the API library function
+Commands sent to the wrapper need to be json formatted, and have item `command` with a value set to the name of the API library function
 being called. Function names are exactly as defined in the `jlrpy.py` library, with arguments given with named parameters in the dict 'kwargs' e.g:
 
     1. To set a departure time, the command would look like:
@@ -108,9 +108,6 @@ def initialise_mqtt_client(mqtt_client):
     logger.info("Connecting to mqtt server %s" % MQTT_SERVER)
     mqtt_client.connect(MQTT_SERVER, port=1883, keepalive=MQTT_KEEPALIVE, bind_address="")
 
-    logger.info("Subscribing to mqtt topic '%s' for inbound commands" % MQTT_SUB_TOPIC)
-    mqtt_client.subscribe(MQTT_SUB_TOPIC)
-
     return mqtt_client
 
 
@@ -120,6 +117,8 @@ def mqtt_on_connect(client, userdata, flags, rc):
     if rc == 0:
         client.connected_flag = True #set flag
         logger.info("MQTT connection established with broker")
+        logger.info("Subscribing to mqtt topic '%s' for inbound commands" % MQTT_SUB_TOPIC)
+        mqtt_client.subscribe(MQTT_SUB_TOPIC)
         update_state_on_mqtt("online")
     else:
         logger.error("MQTT connection failed (code {})".format(rc))
@@ -416,7 +415,8 @@ def get_status(for_key=None):
                 alerts = full_status["vehicleAlerts"] if "vehicleAlerts" in full_status else {}
                 status = full_status["vehicleStatus"] if "vehicleStatus" in full_status else {}
                 location = v.get_position()
-                publish_status_dict(status, "status")
+                for key in status:
+                    publish_status_dict(status[key], "status")
                 logger.info("1/{} Status data published to mqtt".format(count))
                 
                 publish_status_dict(alerts, "alerts")
@@ -424,8 +424,8 @@ def get_status(for_key=None):
                 
                 if "position" in location:
                     publish_position(location)
-                    if "longitude" in location["position"] and "latitude" in location["position"]:
-                        get_and_publish_reverse_geocode(location["position"])                        
+                #    if "longitude" in location["position"] and "latitude" in location["position"]:
+                #        get_and_publish_reverse_geocode(location["position"])                        
                 logger.info("3/{} Location data published to mqtt".format(count))
                 
                 timers = get_departure_timers(v)
