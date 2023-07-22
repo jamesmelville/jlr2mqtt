@@ -5,6 +5,6 @@ WORKDIR /usr/src/app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY jlr2mqtt.py .
 
 CMD [ "python", "./jlr2mqtt.py" ]
